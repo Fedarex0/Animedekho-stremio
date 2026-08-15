@@ -8,7 +8,8 @@ const builder = new addonBuilder({
     description: 'AnimeDekho Stremio Addon',
     resources: ['stream'],
     types: ['movie', 'series'],
-    idPrefixes: ['tt']
+    idPrefixes: ['tt'],
+    catalogs: []
 });
 
 builder.defineStreamHandler(async function(args) {
@@ -19,3 +20,4 @@ builder.defineStreamHandler(async function(args) {
 });
 
 serveHTTP(builder.getInterface(), { port: process.env.PORT || 7000 });
+
