@@ -15,9 +15,16 @@ const builder = new addonBuilder({
 builder.defineStreamHandler(async function(args) {
     console.log('Fetching stream for ID:', args.id);
     
-    // Return an empty array for now until scraping logic is added
-    return { streams: [] };
+    // Returns a test video for ANY movie/series you click in Stremio
+    return {
+        streams: [
+            {
+                name: "AnimeDekho",
+                title: "Test Stream (It Works!)",
+                url: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+            }
+        ]
+    };
 });
 
 serveHTTP(builder.getInterface(), { port: process.env.PORT || 7000 });
-
