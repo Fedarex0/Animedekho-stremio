@@ -15,13 +15,13 @@ const builder = new addonBuilder({
 builder.defineStreamHandler(async function(args) {
     console.log('Fetching stream for ID:', args.id);
     
-    // Returns a test video for ANY movie/series you click in Stremio
+    // Returns a secure HTTPS test video
     return {
         streams: [
             {
                 name: "AnimeDekho",
-                title: "Test Stream (It Works!)",
-                url: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                title: "Test Stream (Secure)",
+                url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
             }
         ]
     };
