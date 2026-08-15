@@ -5,7 +5,7 @@ const builder = new addonBuilder({
     id: 'org.animedekhoaddon',
     version: '1.0.0',
     name: 'AnimeDekho Addon',
-    description: 'AnimeDekho Stremio Addon',
+    description: 'Direct Anime Streaming Addon for Stremio',
     resources: ['stream'],
     types: ['movie', 'series'],
     idPrefixes: ['tt'],
@@ -13,19 +13,17 @@ const builder = new addonBuilder({
 });
 
 const TMDB_API_KEY = '2318ee9d371694d3fc3079a6aa6f6144';
-const SITE_URL = 'https://animedekho.app';
 
 builder.defineStreamHandler(async function(args) {
-    console.log('Stremio clicked on ID:', args.id);
+    console.log('Stremio requested ID:', args.id);
     
-    // Stremio IDs look like "tt1234567" or "tt1234567:1:2" (Series:Season:Episode)
-    const imdbId = args.id.split(':')[0]; 
+    const parts = args.id.split(':');
+    const imdbId = parts[0];
+    const episode = parts[2] || 1;
 
     try {
-        // 1. Ask TMDB for the Anime Name
-        const tmdbUrl = `https://api.themoviedb.org/3/find/${imdbId}?api_key=${TMDB_API_KEY}&external_source=imdb_id`;
-        const tmdbResponse = await fetch(tmdbUrl);
-        const tmdbData = await tmdbResponse.json();
+        const tmdbRes = await fetch(`https://api.themoviedb.org/3/find/${imdbId}?api_key=${TMDB_API_KEY}&external_source=imdb_id`);
+        const tmdbData = await tmdbRes.json();
         
         let title = '';
         if (tmdbData.movie_results && tmdbData.movie_results.length > 0) {
@@ -35,28 +33,46 @@ builder.defineStreamHandler(async function(args) {
         }
 
         if (!title) {
-            console.log('No title found on TMDB for ID:', imdbId);
             return { streams: [] };
         }
 
-        console.log('TMDB found the title:', title);
+        console.log(`Resolved TMDB title: ${title}`);
 
-        // 2. Connect to animedekho.app
-        const searchQuery = encodeURIComponent(title);
-        
-        // This will create a button that opens the browser to search for that show
-        return {
-            streams: [
-                {
-                    name: "AnimeDekho",
-                    description: `Search for "${title}"`,
-                    externalUrl: `${SITE_URL}/search?keyword=${searchQuery}`
-                }
-            ]
-        };
+        const searchRes = await fetch(`https://api.consumet.org/anime/gogoanime/${encodeURIComponent(title)}`);
+        const searchData = await searchRes.json();
 
-    } catch (error) {
-        console.error('Error getting data:', error);
+        if (!searchData.results || searchData.results.length === 0) {
+            return { streams: [] };
+        }
+
+        const animeId = searchData.results[0].id;
+
+        const detailRes = await fetch(`https://api.consumet.org/anime/gogoanime/info/${animeId}`);
+        const detailData = await detailRes.json();
+
+        if (!detailData.episodes || detailData.episodes.length === 0) {
+            return { streams: [] };
+        }
+
+        const targetEp = detailData.episodes.find(ep => ep.number == episode) || detailData.episodes[0];
+
+        const watchRes = await fetch(`https://api.consumet.org/anime/gogoanime/watch/${targetEp.id}`);
+        const watchData = await watchRes.json();
+
+        if (!watchData.sources || watchData.sources.length === 0) {
+            return { streams: [] };
+        }
+
+        const streams = watchData.sources.map(source => ({
+            name: "AnimeDekho",
+            title: `${title} - Ep ${targetEp.number} (${source.quality || 'HD'})`,
+            url: source.url
+        }));
+
+        return { streams };
+
+    } catch (err) {
+        console.error('Error fetching direct streams:', err);
         return { streams: [] };
     }
 });
